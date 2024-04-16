@@ -1,13 +1,11 @@
 from binance.client import Client
 import pandas as pd
 import streamlit as st
+import logging
+
+logger = logging.getLogger(__name__)
 
 binance_client = Client()
-
-progress_func = None
-
-def set_progress_func(func):
-    progress_func = func
 
 @st.cache_data
 def get_symbols():
@@ -41,42 +39,19 @@ def fetch_all_symbols_klines():
     i = 0
     for sym in symbols:
         i = i + 1
-        progress_func(f"{i}/{len(symbols)} processing {sym}")
+        logger.info(f"{i}/{len(symbols)} processing {sym}")
         sym_klines[sym] = fetch_historical_klines(sym, "1m")
     
-    progress_func("fetch_all_symbols_klines done")
+    logger.info("fetch_all_symbols_klines done")
     return sym_klines
 
 
 import pandas_ta as ta
-
-# @st.cache_data(ttl="10m")
-def get_non_trivial_symbols():
-    symbols = get_symbols()
-    sym_klines = fetch_all_symbols_klines()
-    ret = []
-
-    #
-    # 거래대금 1분당 10000달러 이상, atr 0.4% 이상
-    #
-    for sym in symbols:
-        df = sym_klines[sym]
-        volsma = df.ta.sma(close=df.v, length=10)
-        volusdsma = round(df.ta.sma(close=df.v * df.c, length=10))
-        volratio = round(100.0 * df.v / volsma)
-        atr = df.ta.atr(high=df.h, low=df.l, close=df.c, length=10)
-        atrp = round(100.0 * atr / df.c, 2)
-
-        if volusdsma.iloc[-1] > 10000 and atrp.iloc[-1] > 0.4:
-            ret.append(f"{sym : <10} volusdsma ${volusdsma.iloc[-1] : <10} volratio {volratio.iloc[-1] : <4}%  atrp {atrp.iloc[-1] : <3}%")
-
-    return ret
-
 import matplotlib.pyplot as plt
 
 def show_vol_atr_map():
-    symbols = get_symbols()
     sym_klines = fetch_all_symbols_klines()
+    symbols = sym_klines.keys()
 
     # Lists to store values for each symbol
     volusdsma_values = []
@@ -95,7 +70,7 @@ def show_vol_atr_map():
         atrp = round(100.0 * atr / df.c, 2)
         rsi = df.ta.rsi(high=df.h, low=df.l, close=df.c, length=10)
 
-        if volusdsma.iloc[-1] > 100000:
+        if volusdsma.iloc[-1] > 10000 and atrp.iloc[-1] > 0.4:
             volusdsma_values.append(volusdsma.iloc[-1])
             volratio_values.append(volratio.iloc[-1] * 2)
             atrp_values.append(atrp.iloc[-1])
