@@ -1,9 +1,19 @@
 import streamlit as st 
 import binance_util
 
-st.set_page_config(page_title = "This is a Multipage WebApp") 
-st.title("This is the Home Page Geeks.")
+st.set_page_config(page_title = "Screener WebApp") 
+st.title("Screener")
 
-st.write("Hello, world???")
+st.write("Non-trivial symbols:")
 
-st.write(binance_util.get_symbols())
+# creating a placeholder for the fixed sized textbox
+logtxtbox = st.empty()
+
+def st_progress(a):
+    # logtxtbox.text_area("Logging: ", a, height = 100)
+    print(a)
+
+binance_util.progress_func = st_progress
+st.write(binance_util.get_non_trivial_symbols())
+
+binance_util.show_vol_atr_map()
