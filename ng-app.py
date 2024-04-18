@@ -17,15 +17,9 @@ class Worker:
 
         app.on_startup(self._create_queue)
 
-    async def run(self, func: Callable[..., Generator[float, None, None]]) -> None:
-        background_tasks.create(run.cpu_bound(self._run_generator, func, self._queue))
+    async def run(self, producer) -> None:
+        background_tasks.create(producer(self._queue))
         background_tasks.create(self._consume_queue())
-
-    @staticmethod
-    def _run_generator(func: Callable[..., Generator[float, None, None]], queue: Queue) -> None:
-        for progress in func():
-            queue.put({'progress': progress})
-        queue.put({'progress': 1.0})
 
     def _create_queue(self) -> None:
         self._queue = Manager().Queue()
@@ -43,12 +37,13 @@ class Worker:
         self.is_running = False
 
 
-def heavy_computation() -> Generator[float, None, None]:
+async def heavy_computation(queue: Queue):
     n = 50
     for i in range(n):
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
         print(f"i {i}")
-        yield i / n
+        queue.put({'progress': i / n})
+    queue.put({'progress': 1.0})
 
 
 worker = Worker()
